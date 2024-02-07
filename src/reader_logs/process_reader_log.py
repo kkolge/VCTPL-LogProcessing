@@ -1,25 +1,149 @@
 # imports 
+import glob
+
 import pandas as pd
 from datetime import datetime, timedelta
 
+# constant use to separate multiple trips
+TIME_GAP = timedelta(minutes=30)
+
 
 # Reading the log file.
-def load_file_to_df(filename):
-    """This function takes a file name as an input and loads it into a dataframe
+def load_file_to_df(folder_name):
+    """This function takes a folder name as an input and loads all the data from all logfiles into a dataframe
     and returns a dataframe"""
-    try:
-        df_file = pd.read_csv(filename,
+    res = glob.glob(f"{folder_name}/**/*.txt", recursive=True)
+    df_all_files = pd.DataFrame()
+    for file in res:
+        print(f"Start importing file {file}")
+        df_file = pd.read_csv(file,
                               sep=" : ",
                               header=None,
                               names=["Reader_IP", "Tag ID", "TEMP"], engine="python")
-    except FileNotFoundError as fnfe:
-        df_file = None
-        print(f"{filename} not found. Please check the folder selection and try again")
+        df_all_files = pd.concat([df_all_files, df_file],
+                                 axis=0,
+                                 ignore_index=True)
 
-    if df_file is not None:
-        df_file.head()
+    return df_all_files
 
-    return df_file
+
+def process(df):
+    """
+        Following steps will be performed to process the data
+        1. initialize a list to hold the final set of rows
+        2. initialize paramerets that need to follow the loop for comparision
+        2.1 tag_id
+        2.2 groups
+        3. read a row
+        4. check if the tag id is same as last row. if not, create a new group
+        5.
+    """
+    tag_id = None
+    reader_id = None
+    max_rssi = None
+    min_timestamp = None
+    max_timestamp = None
+    tag_reader_group = []
+
+    for index, row in df.iterrows():
+        # Handling first row
+        if row["Tag ID"] is None and row["Reader_IP"] is None:
+            tag_id = row["Tag ID"]
+            reader_id = row["Reader_IP"]
+            max_rssi = 0.0
+            min_timestamp = row["TimeStamp"]
+            max_timestamp = row["TimeStamp"]
+            continue
+
+        # Handling other rows
+        if row["Tag ID"] == tag_id:
+            if row["Reader_IP"] == reader_id:
+                if row["TimeStamp"] < min_timestamp:
+                    min_timestamp = row["TimeStamp"]
+                if row["TimeStamp"] > max_timestamp:
+                    if row["TimeStamp"] - max_timestamp > TIME_GAP:
+                        tag_reader_group.append([tag_id, reader_id, min_timestamp, max_timestamp, max_rssi])
+                        tag_id = row["Tag ID"]
+                        reader_id = row["Reader_IP"]
+                        max_rssi = 0.0
+                        min_timestamp = row["TimeStamp"]
+                        max_timestamp = row["TimeStamp"]
+                    else:
+                        max_timestamp = row["TimeStamp"]
+                if row["RSSI"] > max_rssi:
+                    max_rssi = row["RSSI"]
+            else:
+                tag_reader_group.append([tag_id, reader_id, min_timestamp, max_timestamp, max_rssi])
+                reader_id = row["Reader_IP"]
+                max_rssi = 0.0
+                min_timestamp = row["TimeStamp"]
+                max_timestamp = row["TimeStamp"]
+        else:
+            tag_reader_group.append([tag_id, reader_id, min_timestamp, max_timestamp, max_rssi])
+            tag_id = row["Tag ID"]
+            reader_id = row["Reader_IP"]
+            max_rssi = 0.0
+            min_timestamp = row["TimeStamp"]
+            max_timestamp = row["TimeStamp"]
+
+    print(f"Total unique rows found: {len(tag_reader_group)}")
+    return tag_reader_group
+
+
+def process2(df):
+    """
+        Following steps will be performed to process the data
+        1. initialize a list to hold the final set of rows
+        2. initialize paramerets that need to follow the loop for comparision
+        2.1 tag_id
+        2.2 groups
+        3. read a row
+        4. check if the tag id is same as last row. if not, create a new group
+        5.
+    """
+    tag_id = None
+    reader_id = None
+    max_rssi = None
+    min_timestamp = None
+    max_timestamp = None
+    tag_reader_group = []
+
+    for index, row in df.iterrows():
+        # Handling first row
+        if row["Tag ID"] is None and row["Reader_IP"] is None:
+            tag_id = row["Tag ID"]
+            reader_id = row["Reader_IP"]
+            max_rssi = 0.0
+            min_timestamp = row["TimeStamp"]
+            max_timestamp = row["TimeStamp"]
+            continue
+
+        # Handling other rows
+        if row["Tag ID"] == tag_id:
+            if row["TimeStamp"] < min_timestamp:
+                min_timestamp = row["TimeStamp"]
+            if row["TimeStamp"] > max_timestamp:
+                if row["TimeStamp"] - max_timestamp > TIME_GAP:
+                    tag_reader_group.append([tag_id, reader_id, min_timestamp, max_timestamp, max_rssi])
+                    tag_id = row["Tag ID"]
+                    reader_id = row["Reader_IP"]
+                    max_rssi = 0.0
+                    min_timestamp = row["TimeStamp"]
+                    max_timestamp = row["TimeStamp"]
+                else:
+                    max_timestamp = row["TimeStamp"]
+            if row["RSSI"] > max_rssi:
+                max_rssi = row["RSSI"]
+        else:
+            tag_reader_group.append([tag_id, reader_id, min_timestamp, max_timestamp, max_rssi])
+            tag_id = row["Tag ID"]
+            reader_id = row["Reader_IP"]
+            max_rssi = 0.0
+            min_timestamp = row["TimeStamp"]
+            max_timestamp = row["TimeStamp"]
+
+    print(f"Total unique rows found: {len(tag_reader_group)}")
+    return tag_reader_group
 
 
 def df_preprocess(df):
@@ -27,7 +151,9 @@ def df_preprocess(df):
     df[["RSSI", "Date", "Time", "AMPM"]] = df["TEMP"].str.split(" ", expand=True)
     df["TimeStamp"] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format="%m/%d/%Y %H:%M:%S")
     df = df.drop(labels=["Date", "Time", "AMPM", "TEMP"], axis=1)
-    df.sort_values(by=["Tag ID", "Reader_IP", "TimeStamp"])
+    df["RSSI"] = df["RSSI"].astype(float)
+    df['TimeStamp'] = pd.to_datetime(df['TimeStamp'])
+    df = df.sort_values(by=["Tag ID", "Reader_IP", "TimeStamp"])
     df.reset_index()
     return df
 
