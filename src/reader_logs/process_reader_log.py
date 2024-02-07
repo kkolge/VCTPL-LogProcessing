@@ -143,7 +143,17 @@ def process2(df):
             max_timestamp = row["TimeStamp"]
 
     print(f"Total unique rows found: {len(tag_reader_group)}")
-    return tag_reader_group
+
+    result_list = []
+
+    for row in tag_reader_group:
+        if row[1] is not None:
+            if row[4] == 0 or row[3] - row[2] < timedelta(minutes=1):
+                result_list.append(row)
+
+#    return tag_reader_group
+    print(f"Number of rows after cleaning {len(result_list)}")
+    return result_list
 
 
 def df_preprocess(df):

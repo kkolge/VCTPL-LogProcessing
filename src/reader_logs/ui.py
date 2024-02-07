@@ -57,7 +57,7 @@ while True:
         df_all_files = process_reader_log.load_file_to_df(folder_path)
         # print(df_all_files.head())
         print(f"Reading files completed.")
-        print(f"Number of cols x rows : {df_all_files.shape}")
+        print(f"Number of rows x cols : {df_all_files.shape}")
 
         # preprocessing and grouping
         df_all_files_preprocessed = process_reader_log.df_preprocess(df_all_files)
@@ -83,7 +83,7 @@ while True:
             write.writerows(df_results)
 
         print(f"Output file generated. filename: {file_path}")
-        window.set_cursor("mouse")
+        window.set_cursor("arrow")
 
 window.close()
 
