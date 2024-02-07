@@ -1,1 +1,20 @@
 /src/db/
+/bin/
+/etc/
+/include/
+/lib/
+/lib64/
+/share/
+/src/reader_logs/.ipynb_checkpoints/
+/src/reader_logs/3-4Feb/
+/src/reader_logs/5 & 6 Feb/
+/src/reader_logs/7Feb/
+/src/reader_logs/ANPR-7Feb/
+/src/reader_logs/3-4Feb.zip
+/src/reader_logs/log_files/Lane1/
+/src/reader_logs/log_files/Lane2/
+/src/reader_logs/log_files/Lane3/
+/src/reader_logs/log_files/Lane4/
+/src/reader_logs/log_files/Lane5/
+./idea
+/lib64/
