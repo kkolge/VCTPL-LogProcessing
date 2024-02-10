@@ -148,7 +148,7 @@ def process2(df):
 
     for row in tag_reader_group:
         if row[1] is not None:
-            if row[4] == 0 or row[3] - row[2] < timedelta(minutes=1):
+            if not ( row[4] == 0 or row[3] - row[2] < timedelta(minutes=1)) :
                 result_list.append(row)
 
 #    return tag_reader_group
